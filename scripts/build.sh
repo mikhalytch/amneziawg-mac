@@ -13,7 +13,7 @@ go_version="$(go version)"
 xcode-select -p >/dev/null 2>&1 || die "Xcode Command Line Tools required. Run: xcode-select --install"
 command -v clang >/dev/null || die "clang required. Run: xcode-select --install"
 
-"$ROOT/scripts/prepare.sh"
+just --justfile "$ROOT/justfile" prepare
 mkdir -p "$ROOT/bin"
 say "Building amneziawg-go"
 (cd "$ROOT/build/amneziawg-go" && go build -trimpath -o "$ROOT/bin/amneziawg-go")

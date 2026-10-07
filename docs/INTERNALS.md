@@ -138,7 +138,7 @@ the README. These commits have exact AWG 3.1 tags. `.gitmodules` sets the update
 branch to master; the parent index/commit records exact gitlinks. Updating is an
 explicit operation, never part of ordinary builds.
 
-`scripts/prepare.sh` exports each submodule's committed HEAD with `git archive`.
+The `prepare` recipe in `justfile` exports each submodule's committed HEAD with `git archive`.
 It applies `patches/series` to the temporary tools export after checking every
 patch. Failed preparation leaves the previous export intact and returns failure;
 the build stops. Repeated preparation starts from clean sources, so patches do
