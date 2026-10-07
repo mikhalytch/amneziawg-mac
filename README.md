@@ -36,10 +36,11 @@ or server; the bundled template intentionally illustrates only basic settings.
 
 ```sh
 xcode-select --install
-brew install go bash
+brew install go bash just
 ```
 
-- **Xcode Command Line Tools** provide clang and make.
+- **Xcode Command Line Tools** provide clang and make for the upstream C tool.
+- **Just** runs this project's tasks; install it with `brew install just`.
 - **Go 1.25+** builds the engine; Go is not required after installation.
 - **Bash 4+ is required at runtime.** macOS `/bin/bash` 3.2 cannot run this
   script. The build locates a suitable Bash and writes its absolute path into
@@ -57,7 +58,7 @@ Once this repository has a remote, clone it recursively:
 ```sh
 git clone --recurse-submodules <this-repository-url> amneziawg-mac
 cd amneziawg-mac
-make
+just
 ```
 
 For an existing checkout or a clone made without `--recurse-submodules`:
@@ -65,8 +66,8 @@ For an existing checkout or a clone made without `--recurse-submodules`:
 ```sh
 cd ~/prj/amneziawg-mac
 git submodule update --init --recursive
-# Equivalent convenience target: make init-submodules
-make
+# Equivalent convenience target: just init-submodules
+just
 ```
 
 After pulling parent-repository changes, synchronize and check out its recorded
@@ -76,23 +77,26 @@ pins before rebuilding:
 git pull
 git submodule sync --recursive
 git submodule update --init --recursive
-make
+just
 ```
 
-`make` reports the initialization command if a submodule is missing. Ordinary
+`just` reports the initialization command if a submodule is missing. Ordinary
 builds use the currently checked-out committed submodule revisions and do not
 fetch upstream updates. Tracked local edits inside a submodule are rejected;
 put macOS adaptations in `patches/` instead.
 
 ## Build and install
 
+Run `just --list` to see all available tasks. The default `just` task builds
+the three executables. Use `PREFIX=... just install` to override the destination.
+
 ```sh
-make                         # outputs bin/amneziawg-go, bin/awg, bin/awg-quick
+just                         # outputs bin/amneziawg-go, bin/awg, bin/awg-quick
 ./install.sh                 # builds, then installs real copies
 # Optional override: PREFIX=/usr/local ./install.sh
 ```
 
-`make install` delegates to the installer. It installs the three executables
+`just install` installs executable copies using the production installer. It installs the three executables
 into `$PREFIX/bin`, creates root-owned `/etc/amnezia/amneziawg` with mode `0700`,
 and places a configuration example there with mode `0600`. It never overwrites
 a real configuration. No LaunchDaemon or kernel extension is installed.
@@ -100,8 +104,8 @@ a real configuration. No LaunchDaemon or kernel extension is installed.
 The binaries are native to the machine doing the build. After a normal install,
 the checkout can be moved or removed. Keep the selected Bash installation.
 
-For development, `make dev-install` creates symlinks into this checkout; the
-checkout must stay in place. `make clean` removes only generated `bin/` and
+For development, `just dev-install` creates symlinks into this checkout; the
+checkout must stay in place. `just clean` removes only generated `bin/` and
 `build/` files and leaves upstream submodules intact.
 
 ## Configure and run
@@ -174,7 +178,7 @@ may reject an addition; that existing route is left untouched.
   connecting; concurrent clients can compete for the server's peer endpoint.
 - Configuration hooks (`PreUp`, `PostUp`, `PreDown`, `PostDown`) execute commands
   as root. Run only configurations and source revisions you trust.
-- `sudo` is needed for tunnel creation, routing, and DNS changes. `make test`
+- `sudo` is needed for tunnel creation, routing, and DNS changes. `just test`
   uses temporary files and simulated routing commands instead of changing the
   machine's VPN, routes, DNS, or installed executables.
 - Uninstall preserves configs by default. `./uninstall.sh --purge` deletes them
@@ -193,11 +197,11 @@ Updates are explicit; `branch = master` is an update preference, not a floating
 dependency. To fetch both official master heads and check patch applicability:
 
 ```sh
-make update-upstreams
-make
-make test
-make test-upstream
-make print-upstreams
+just update-upstreams
+just
+just test
+just test-upstream
+just print-upstreams
 ```
 
 Review the upstream changes and update the versions table above with each full
@@ -216,19 +220,19 @@ binary after a failed build. To restore the currently recorded pins:
 
 ```sh
 git submodule update --init --recursive
-make
+just
 ```
 
 ## Checks and troubleshooting
 
 ```sh
-make check-patches            # clean exports, ordered patch checks, shell syntax
-make test                     # local Darwin and build-workflow regressions
-make test-upstream            # upstream Go suite in the build export
-make print-upstreams          # actual checked-out submodule revisions
+just check-patches            # clean exports, ordered patch checks, shell syntax
+just test                     # local Darwin and build-workflow regressions
+just test-upstream            # upstream Go suite in the build export
+just print-upstreams          # actual checked-out submodule revisions
 ```
 
-Missing submodules: run `make init-submodules`. Missing Go/clang/Bash: install the
+Missing submodules: run `just init-submodules`. Missing Go/clang/Bash: install the
 prerequisites above. If commands are not found after installation, check that
 `$PREFIX/bin` is on your shell's and sudo's command search path, or invoke the
 installed executable by absolute path. If a tunnel has no handshake, verify
@@ -241,7 +245,7 @@ If dependency downloads fail with a locally configured `GOPROXY=direct`, retry
 using the official Go proxy for that command only:
 
 ```sh
-GOPROXY=https://proxy.golang.org,direct make test-upstream
+GOPROXY=https://proxy.golang.org,direct just test-upstream
 ```
 
 Validation results and any inherited upstream test failures are recorded in

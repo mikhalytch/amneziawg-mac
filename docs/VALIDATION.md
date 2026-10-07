@@ -42,7 +42,7 @@ it with checksum validation, and the netstack/Outline packages then built or
 passed their tests. The retry changes the proxy for that command only:
 
 ```sh
-GOPROXY=https://proxy.golang.org,direct make test-upstream
+GOPROXY=https://proxy.golang.org,direct just test-upstream
 ```
 
 To reproduce the remaining failure without running the full suite:

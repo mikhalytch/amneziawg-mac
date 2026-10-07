@@ -1,7 +1,7 @@
 # Darwin patch series
 
 Apply the files in `series` in order to an exported `amneziawg-tools` tree.
-`make prepare` does this with `git apply --check` followed by `git apply`.
+`just prepare` does this with `git apply --check` followed by `git apply`.
 The patches never modify the upstream submodule checkout.
 
 Patches 01 and 02 reproduce all functional source changes from
@@ -17,5 +17,5 @@ copyright/SPDX notices remain in the patched file.
 When upstream changes, review its Darwin script, then regenerate the affected
 patches against that revision using `a/src/wg-quick/darwin.bash` and
 `b/src/wg-quick/darwin.bash` paths. Keep fixes separate from the custom extension.
-Retire any change that upstream has incorporated. Run `make check-patches` and
-`make test` before recording updated gitlinks and the README versions table.
+Retire any change that upstream has incorporated. Run `just check-patches` and
+`just test` before recording updated gitlinks and the README versions table.

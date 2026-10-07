@@ -1,4 +1,4 @@
-"""Create tiny committed source repositories and copied build helpers, exercise
+"""Create tiny committed source repositories and copied Just recipes, exercise
 preparation and its failures, and verify clean submodules, reproducible output,
 actionable missing-source diagnostics, and strict patch-conflict handling.
 """
@@ -17,7 +17,10 @@ class PreparationTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory(prefix="awg-prep-", dir="/private/tmp")
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
-        shutil.copytree(self.project / "scripts", self.root / "scripts")
+        self.assertTrue((self.project / "justfile").exists(), "The public Just entrypoint is missing")
+        shutil.copyfile(self.project / "justfile", self.root / "justfile")
+        if (self.project / "scripts").exists():
+            shutil.copytree(self.project / "scripts", self.root / "scripts")
         shutil.copytree(self.project / "patches", self.root / "patches")
         subprocess.run(["git", "init", "-q", str(self.root)], check=True)
         for name in ("amneziawg-go", "amneziawg-tools"):
@@ -39,7 +42,7 @@ class PreparationTests(unittest.TestCase):
         return subprocess.check_output(["git", "-C", str(repo), *args], text=True)
 
     def prepare(self, **variables):
-        return subprocess.run([str(self.root / "scripts/prepare.sh")],
+        return subprocess.run(["just", "--justfile", str(self.root / "justfile"), "prepare"],
                               env=dict(os.environ, **variables), text=True, capture_output=True)
 
     def test_missing_submodule_reports_checkout_command(self):

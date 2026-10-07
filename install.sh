@@ -10,7 +10,7 @@ PREFIX="${PREFIX:-$(default_prefix)}"
 BINDIR="$PREFIX/bin"
 CONFDIR="/etc/amnezia/amneziawg"
 [[ -d $BINDIR ]] || die "Target $BINDIR does not exist. Install Homebrew or choose an existing PREFIX."
-make -C "$ROOT" build
+just --justfile "$ROOT/justfile" build
 
 do_install() {
     local mode="$1" src="$2" dst="$3"
