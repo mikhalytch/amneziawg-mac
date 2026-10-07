@@ -1,0 +1,80 @@
+--- a/src/wg-quick/darwin.bash
++++ b/src/wg-quick/darwin.bash
+@@ -19,6 +19,7 @@
+ MTU=""
+ DNS=( )
+ DNS_SEARCH=( )
++EXCLUDED_IPS=( )
+ TABLE=""
+ PRE_UP=( )
+ POST_UP=( )
+@@ -71,6 +72,7 @@
+ 			DNS) for v in ${value//,/ }; do
+ 				[[ $v =~ (^[0-9.]+$)|(^.*:.*$) ]] && DNS+=( $v ) || DNS_SEARCH+=( $v )
+ 			done; continue ;;
++			ExcludeIPs) EXCLUDED_IPS+=( ${value//,/ } ); continue ;;
+ 			Table) TABLE="$value"; continue ;;
+ 			PreUp) PRE_UP+=( "$value" ); continue ;;
+ 			PreDown) PRE_DOWN+=( "$value" ); continue ;;
+@@ -149,6 +151,31 @@
+ 		else
+ 			cmd route -q -n delete -inet "$destination" >/dev/null || true
+ 		fi
++	done
++	del_excluded_routes
++}
++
++# ExcludeIPs (custom extension, not upstream): route the given subnets AROUND the
++# tunnel via the real default gateway, so traffic to them bypasses the VPN.
++# AllowedIPs is left untouched (typically 0.0.0.0/0) - this is a routing-level split.
++add_excluded_routes() {
++	local ip
++	[[ ${#EXCLUDED_IPS[@]} -gt 0 ]] || return 0
++	[[ -n $GATEWAY4 || -n $GATEWAY6 ]] || collect_gateways
++	for ip in "${EXCLUDED_IPS[@]}"; do
++		if [[ $ip == *:* ]]; then
++			[[ -n $GATEWAY6 ]] && cmd route -q -n add -inet6 "$ip" -gateway "$GATEWAY6" >/dev/null 2>&1 || true
++		else
++			[[ -n $GATEWAY4 ]] && cmd route -q -n add -inet "$ip" -gateway "$GATEWAY4" >/dev/null 2>&1 || true
++		fi
++	done
++}
++
++del_excluded_routes() {
++	local ip family
++	for ip in "${EXCLUDED_IPS[@]}"; do
++		family=inet; [[ $ip == *:* ]] && family=inet6
++		cmd route -q -n delete -$family "$ip" >/dev/null 2>&1 || true
+ 	done
+ }
+ 
+@@ -289,6 +316,11 @@
+ 		fi
+ 	done
+ 	ENDPOINTS=( "${added[@]}" )
++	# If the default gateway changed, re-point the ExcludeIPs bypass routes at it.
++	if [[ $remove_all_old -eq 1 && ${#EXCLUDED_IPS[@]} -gt 0 ]]; then
++		del_excluded_routes
++		add_excluded_routes
++	fi
+ }
+ 
+ set_dns() {
+@@ -434,6 +466,9 @@
+ 	    IP addresses (with an optional CIDR mask) to be set for the interface.
+ 	  - DNS: an optional DNS server to use while the device is up.
+ 	  - MTU: an optional MTU for the interface; if unspecified, auto-calculated.
++	  - ExcludeIPs: comma-separated subnets to route AROUND the tunnel via the real
++	    default gateway (custom extension; routing-level split-exclude). AllowedIPs
++	    is left untouched.
+ 	  - Table: an optional routing table to which routes will be added; if
+ 	    unspecified or \`auto', the default table is used. If \`off', no routes
+ 	    are added. Besides \`auto' and \`off', only \`main' is supported on
+@@ -464,6 +499,7 @@
+ 		add_route "$i"
+ 	done
+ 	[[ $AUTO_ROUTE4 -eq 1 || $AUTO_ROUTE6 -eq 1 ]] && set_endpoint_direct_route
++	add_excluded_routes
+ 	[[ ${#DNS[@]} -gt 0 ]] && set_dns
+ 	monitor_daemon
+ 	execute_hooks "${POST_UP[@]}"
