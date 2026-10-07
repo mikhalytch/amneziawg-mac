@@ -11,7 +11,7 @@ import tempfile
 import unittest
 
 
-class PreparationTests(unittest.TestCase):
+class SourceProjectFixture:
     def setUp(self):
         self.project = Path(__file__).resolve().parents[1]
         self.tmp = tempfile.TemporaryDirectory(prefix="awg-prep-", dir="/private/tmp")
@@ -41,6 +41,8 @@ class PreparationTests(unittest.TestCase):
     def git(self, repo, *args):
         return subprocess.check_output(["git", "-C", str(repo), *args], text=True)
 
+
+class PreparationTests(SourceProjectFixture, unittest.TestCase):
     def prepare(self, **variables):
         return subprocess.run(["just", "--justfile", str(self.root / "justfile"), "prepare"],
                               env=dict(os.environ, **variables), text=True, capture_output=True)

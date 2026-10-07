@@ -94,11 +94,11 @@ the three executables. Use `PREFIX=... just install` to override the destination
 
 ```sh
 just                         # outputs bin/amneziawg-go, bin/awg, bin/awg-quick
-./install.sh                 # builds, then installs real copies
-# Optional override: PREFIX=/usr/local ./install.sh
+just install                 # builds, then installs real copies
+# Optional override: PREFIX=/usr/local just install
 ```
 
-`just install` installs executable copies using the production installer. It installs the three executables
+`just install` builds and installs executable copies. It installs the three executables
 into `$PREFIX/bin`, creates root-owned `/etc/amnezia/amneziawg` with mode `0700`,
 and places a configuration example there with mode `0600`. It never overwrites
 a real configuration. No LaunchDaemon or kernel extension is installed.
