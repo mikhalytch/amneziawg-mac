@@ -205,6 +205,9 @@ uninstall *args:
         say "Keeping configurations in $CONFDIR (use --purge to delete them)"
     fi
 
+# Development installation into Homebrew by default (respects PREFIX).
+alias brew-install := dev-install
+
 # Symlink build outputs into PREFIX/bin for development.
 dev-install: build
     #!/bin/bash
