@@ -144,7 +144,8 @@ patch. Failed preparation leaves the previous export intact and returns failure;
 the build stops. Repeated preparation starts from clean sources, so patches do
 not accumulate. The upstream Go version string is generated in the export from
 its actual tag or SHA. Both builds happen under `build/`; source checkouts remain
-clean. `build/upstream-revisions.txt` records the exported commits.
+clean. The root Makefile only prints Just migration hints; all task shell logic
+and shared Bash helper definitions now live in `justfile`. `build/upstream-revisions.txt` records the exported commits.
 
 The original runtime-path and command-name fixes remain patch 01. The original
 ExcludeIPs implementation remains patch 02, including route-monitor integration.

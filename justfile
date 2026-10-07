@@ -4,6 +4,46 @@ set shell := ["/bin/bash", "-euo", "pipefail", "-c"]
 set positional-arguments
 export ROOT := justfile_directory()
 
+# Shared Bash helpers are defined once and expanded into script recipes.
+helpers := '''
+# Shared helpers are compatible with macOS /bin/bash 3.2.
+
+die() { printf 'Error: %s\n' "$*" >&2; exit 1; }
+say() { printf '>> %s\n' "$*"; }
+
+find_bash() {
+    local candidate
+    if [[ -n ${BASH_BIN:-} ]]; then
+        candidate="$BASH_BIN"
+        [[ $candidate == /* && -x $candidate ]] || die "BASH_BIN must be an absolute executable path."
+        "$candidate" -c '[[ ${BASH_VERSINFO[0]} -ge 4 ]]' || die "Bash 4+ required. Install: brew install bash"
+        printf '%s\n' "$candidate"
+        return
+    fi
+    for candidate in "$(command -v bash)" /opt/homebrew/bin/bash /usr/local/bin/bash; do
+        [[ -x $candidate ]] || continue
+        if "$candidate" -c '[[ ${BASH_VERSINFO[0]} -ge 4 ]]'; then
+            printf '%s\n' "$candidate"
+            return
+        fi
+    done
+    die "Bash 4+ required at runtime. Install: brew install bash"
+}
+
+require_submodules() {
+    local name
+    for name in amneziawg-go amneziawg-tools; do
+        [[ -e "$ROOT/src/$name/.git" ]] &&
+            git -C "$ROOT/src/$name" rev-parse --verify HEAD >/dev/null 2>&1 ||
+            die "Missing submodule src/$name. Run: git submodule update --init --recursive (or just init-submodules)."
+        git -C "$ROOT/src/$name" diff --quiet HEAD -- ||
+            die "src/$name has tracked local edits. Builds export committed sources; save your edits before building."
+    done
+}
+
+default_prefix() { brew --prefix 2>/dev/null || printf '/usr/local\n'; }
+'''
+
 # Build the native macOS CLI (the default task).
 all: build
 
@@ -11,7 +51,7 @@ all: build
 build:
     #!/bin/bash
     set -euo pipefail
-    source "$ROOT/scripts/common.sh"
+    {{ helpers }}
     [[ $(uname -s) == Darwin ]] || die "This project builds the macOS CLI only."
     require_submodules
     find_bash >/dev/null
@@ -36,7 +76,7 @@ build:
 prepare:
     #!/bin/bash
     set -euo pipefail
-    source "$ROOT/scripts/common.sh"
+    {{ helpers }}
     require_submodules
     BASH_BIN="$(find_bash)"
     mkdir -p "$ROOT/build"
@@ -101,7 +141,7 @@ install:
     #!/bin/bash
     # Build and install real copies; configs remain separate from this checkout.
     set -euo pipefail
-    source "$ROOT/scripts/common.sh"
+    {{ helpers }}
     [[ $(uname -s) == Darwin ]] || die "This installer is macOS-only."
     PREFIX="${PREFIX:-$(default_prefix)}"
     BINDIR="$PREFIX/bin"
@@ -147,7 +187,7 @@ uninstall *args:
     #!/bin/bash
     # Preserve configs unless the user explicitly requests --purge.
     set -euo pipefail
-    source "$ROOT/scripts/common.sh"
+    {{ helpers }}
     [[ $# -le 1 && ( $# -eq 0 || $1 == --purge ) ]] || die "Usage: just uninstall [--purge]"
     PREFIX="${PREFIX:-$(default_prefix)}"
     BINDIR="$PREFIX/bin"
@@ -169,7 +209,7 @@ uninstall *args:
 dev-install: build
     #!/bin/bash
     set -euo pipefail
-    source "$ROOT/scripts/common.sh"
+    {{ helpers }}
     PREFIX="${PREFIX:-$(default_prefix)}"
     [[ -d "$PREFIX/bin" ]] || die "Missing $PREFIX/bin; choose an existing PREFIX."
     for name in amneziawg-go awg awg-quick; do

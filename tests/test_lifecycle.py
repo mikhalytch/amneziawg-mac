@@ -16,9 +16,6 @@ import test_workflow
 class LifecycleTests(test_workflow.SourceProjectFixture, unittest.TestCase):
     def setUp(self):
         super().setUp()
-        for name in ["install.sh", "uninstall.sh"]:
-            if (self.project / name).exists():
-                shutil.copy2(self.project / name, self.root / name)
         (self.root / "conf").mkdir()
         shutil.copyfile(self.project / "conf/awg0.conf.example",
                         self.root / "conf/awg0.conf.example")

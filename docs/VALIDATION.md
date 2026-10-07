@@ -8,11 +8,13 @@ README; both official remote master heads were checked with `git ls-remote`.
 
 - Native build: passed; `amneziawg-go`, `awg`, and `awg-quick` are generated.
 - Engine reports `v3.1.20260828`; C tool reports `v3.1.20260812`.
-- Local regression suite: 13 tests passed. It exercises real Darwin functions
+- Local regression suite after the Just migration: 17 tests passed. It exercises real Darwin functions
   with temporary configuration/name/socket files and controlled route commands,
   plus clean export preparation and its missing-source/dirty-source/conflict
-  failures. The test's CLI help check uses upstream's stderr output convention.
-- Bash 3.2 parses the bootstrap/install scripts; generated awg-quick selects
+  failures. Further checks cover every Make notice and isolated installation,
+  purge, argument handling, and dev symlinks. The CLI help check uses upstream's
+  stderr output convention.
+- Just script recipes use macOS Bash 3.2 for bootstrap/install logic; generated awg-quick selects
   Bash 4+ explicitly. The old Bash override is rejected by a regression test.
 - Both submodules remain clean. The original project and sibling repositories
   were not modified. The existing untracked `src/tmp/` in the sibling tools
@@ -59,3 +61,19 @@ route change, or DNS change was exercised. Nothing was published during
 validation. A real tunnel smoke test is still required before treating this as
 validated for production connectivity. Review of this port was performed by its implementing
 agent; no subagents were used.
+
+
+## Just migration
+
+The caller authorized replacing root Make execution with Just, then migrating
+each shell script in a separate tested commit. Just first gained equivalent
+tasks; Make targets then became print-only references. Preparation, compilation,
+installation, uninstall/purge, and shared helpers were migrated one at a time.
+No project `.sh` wrapper/helper files remain. Runtime awg-quick is still generated
+from the patched upstream Bash source. Upstream source pins were not changed.
+
+Native compilation and all 17 local regressions pass after migration. Installer
+and uninstaller tests use temporary prefixes and map privileged filesystem
+operations into a temporary configuration directory; they do not install on the
+host. No new upstream Go engine changes were made, so the separately documented
+AWG ping failure remains an unresolved upstream/environment limitation.

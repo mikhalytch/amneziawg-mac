@@ -19,8 +19,6 @@ class SourceProjectFixture:
         self.root = Path(self.tmp.name)
         self.assertTrue((self.project / "justfile").exists(), "The public Just entrypoint is missing")
         shutil.copyfile(self.project / "justfile", self.root / "justfile")
-        if (self.project / "scripts").exists():
-            shutil.copytree(self.project / "scripts", self.root / "scripts")
         shutil.copytree(self.project / "patches", self.root / "patches")
         subprocess.run(["git", "init", "-q", str(self.root)], check=True)
         for name in ("amneziawg-go", "amneziawg-tools"):

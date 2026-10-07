@@ -87,6 +87,10 @@ put macOS adaptations in `patches/` instead.
 
 ## Build and install
 
+Project shell logic lives in `justfile` recipes, with shared helpers defined
+once in the same file. There are no separate project shell scripts. Make remains
+required only to compile the upstream C tool.
+
 The root Makefile is a migration notice: every target prints its Just
 replacement and performs no build, installation, cleanup, or update.
 Run `just --list` to see all available tasks. The default `just` task builds
@@ -147,7 +151,7 @@ tree under `build/`, leaving the upstream submodule unmodified:
    only routes successfully added by this script. Route-add failures and missing
    gateways produce warnings.
 
-The root Makefile, production installer, uninstaller, dev-install flow,
+The production installer, uninstaller, dev-install flow,
 configuration example, troubleshooting documentation, and license notice are
 also ported. New build helpers export committed sources before compiling; the
 Go version string is generated from the pinned revision in the export. The Go
@@ -268,7 +272,7 @@ The original macOS patch and packaging work comes from
 `7d3d26246fe5ccf3f6f5f5978c77f6dc55b0acba`. Its original notice is preserved in
 [LICENSES/amnezia-wg-mac-NOTICE](LICENSES/amnezia-wg-mac-NOTICE).
 
-Local patches, packaging, documentation, and tests are provided under GPL-2.0;
+Local patches, Just recipes, packaging, documentation, and tests are provided under GPL-2.0;
 see [LICENSE](LICENSE) and the full license in [COPYING](COPYING). The upstream
 Go engine retains MIT and the tools retain GPL-2.0, with their original notices
 inside their submodules. Reuse and redistribution must preserve the applicable

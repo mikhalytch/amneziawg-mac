@@ -1,6 +1,6 @@
 AmneziaWG CLI for macOS — license notice
 
-Local Darwin patches, build/install scripts, Makefile, configuration examples,
+Local Darwin patches, Just task recipes, the Makefile notice, configuration examples,
 documentation, and tests are licensed under GNU GPL version 2 (GPL-2.0).
 The full license is provided in COPYING. Changed files and additions in this
 port were prepared on 2026-10-07; see patches/series and docs/INTERNALS.md.
