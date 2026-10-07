@@ -1,0 +1,76 @@
+--- a/src/wg-quick/darwin.bash
++++ b/src/wg-quick/darwin.bash
+@@ -1,5 +1,8 @@
+ #!/usr/bin/env bash
+ # SPDX-License-Identifier: GPL-2.0
++# macOS adaptations from https://github.com/77garuda/amnezia-wg-mac.
++# Modified 2026-10-07: ported fixes and ExcludeIPs persistence/route ownership.
++# Local adaptations remain licensed under GPL-2.0.
+ #
+ # Copyright (C) 2015-2020 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+ #
+@@ -20,6 +23,7 @@
+ DNS=( )
+ DNS_SEARCH=( )
+ EXCLUDED_IPS=( )
++EXCLUDED_ROUTES_ADDED=( )
+ TABLE=""
+ PRE_UP=( )
+ POST_UP=( )
+@@ -159,24 +163,35 @@
+ # tunnel via the real default gateway, so traffic to them bypasses the VPN.
+ # AllowedIPs is left untouched (typically 0.0.0.0/0) - this is a routing-level split.
+ add_excluded_routes() {
+-	local ip
+-	[[ ${#EXCLUDED_IPS[@]} -gt 0 ]] || return 0
++	local ip family gateway
++	[[ $TABLE != off && ${#EXCLUDED_IPS[@]} -gt 0 ]] || return 0
+ 	[[ -n $GATEWAY4 || -n $GATEWAY6 ]] || collect_gateways
+ 	for ip in "${EXCLUDED_IPS[@]}"; do
++		[[ " ${EXCLUDED_ROUTES_ADDED[*]} " == *" $ip "* ]] && continue
++		family=inet; gateway="$GATEWAY4"
+ 		if [[ $ip == *:* ]]; then
+-			[[ -n $GATEWAY6 ]] && cmd route -q -n add -inet6 "$ip" -gateway "$GATEWAY6" >/dev/null 2>&1 || true
++			family=inet6; gateway="$GATEWAY6"
++		fi
++		if [[ -z $gateway ]]; then
++			echo "Warning: no $family gateway; ExcludeIPs route for $ip was not added" >&2
++			continue
++		fi
++		if cmd route -q -n add -$family "$ip" -gateway "$gateway" >/dev/null; then
++			EXCLUDED_ROUTES_ADDED+=( "$ip" )
+ 		else
+-			[[ -n $GATEWAY4 ]] && cmd route -q -n add -inet "$ip" -gateway "$GATEWAY4" >/dev/null 2>&1 || true
+-		fi
+-	done
++			echo "Warning: ExcludeIPs route for $ip was not added; existing routes are left unchanged" >&2
++		fi
++	done
++	return 0
+ }
+ 
+ del_excluded_routes() {
+ 	local ip family
+-	for ip in "${EXCLUDED_IPS[@]}"; do
++	for ip in "${EXCLUDED_ROUTES_ADDED[@]}"; do
+ 		family=inet; [[ $ip == *:* ]] && family=inet6
+-		cmd route -q -n delete -$family "$ip" >/dev/null 2>&1 || true
+-	done
++		cmd route -q -n delete -$family "$ip" >/dev/null || true
++	done
++	EXCLUDED_ROUTES_ADDED=( )
+ }
+ 
+ del_if() {
+@@ -414,6 +429,11 @@
+ 	for address in "${DNS[@]}"; do
+ 		new_config+="DNS = $address"$'\n'
+ 	done
++	if [[ ${#EXCLUDED_IPS[@]} -gt 0 ]]; then
++		local excluded
++		excluded="$(IFS=,; echo "${EXCLUDED_IPS[*]}")"
++		new_config+="ExcludeIPs = $excluded"$'\n'
++	fi
+ 	[[ -n $MTU ]] && new_config+="MTU = $MTU"$'\n'
+ 	[[ -n $TABLE ]] && new_config+="Table = $TABLE"$'\n'
+ 	[[ $SAVE_CONFIG -eq 0 ]] || new_config+=$'SaveConfig = true\n'
