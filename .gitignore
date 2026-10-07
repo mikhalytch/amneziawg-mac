@@ -1,0 +1,8 @@
+/bin/
+/build/
+conf/*.conf
+!conf/*.conf.example
+__pycache__/
+*.pyc
+.DS_Store
+HANDOFF.md

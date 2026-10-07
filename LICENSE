@@ -1,0 +1,18 @@
+AmneziaWG CLI for macOS — license notice
+
+Local Darwin patches, build/install scripts, Makefile, configuration examples,
+documentation, and tests are licensed under GNU GPL version 2 (GPL-2.0).
+The full license is provided in COPYING. Changed files and additions in this
+port were prepared on 2026-10-07; see patches/series and docs/INTERNALS.md.
+
+The original macOS fixes and packaging are adapted from:
+  https://github.com/77garuda/amnezia-wg-mac
+  commit 7d3d26246fe5ccf3f6f5f5978c77f6dc55b0acba
+Its original license notice is preserved in LICENSES/amnezia-wg-mac-NOTICE.
+
+Each upstream component keeps its own license:
+  src/amneziawg-go: MIT; see src/amneziawg-go/LICENSE.
+  src/amneziawg-tools: GPL-2.0; see src/amneziawg-tools/COPYING.
+
+This notice does not relicense upstream code. All original copyright notices
+are retained in the upstream sources and exported build trees.
