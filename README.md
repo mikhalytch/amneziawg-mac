@@ -110,9 +110,14 @@ a real configuration. No LaunchDaemon or kernel extension is installed.
 The binaries are native to the machine doing the build. After a normal install,
 the checkout can be moved or removed. Keep the selected Bash installation.
 
-For development, `just dev-install` creates symlinks into this checkout; the
-checkout must stay in place. `just clean` removes only generated `bin/` and
-`build/` files and leaves upstream submodules intact.
+For development, `just brew-install` (alias of `dev-install`) creates symlinks
+into this checkout in Homebrew's prefix by default; the checkout must stay in
+place. `just brew-remove` (alias of `dev-remove`) removes only symlinks pointing
+into this checkout, including dangling links, and keeps build outputs and
+configurations. Both commands respect `PREFIX`; use the same prefix for removal
+as for installation. Regular files and links to other checkouts are preserved.
+`just clean` removes only generated `bin/` and `build/` files and leaves upstream
+submodules intact.
 
 ## Configure and run
 

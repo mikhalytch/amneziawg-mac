@@ -219,6 +219,24 @@ dev-install: build
         ln -sf "$ROOT/bin/$name" "$PREFIX/bin/$name"
     done
 
+# Remove development symlinks from Homebrew by default (respects PREFIX).
+alias brew-remove := dev-remove
+
+# Remove only PREFIX/bin symlinks installed from this checkout.
+dev-remove:
+    #!/bin/bash
+    set -euo pipefail
+    {{ helpers }}
+    PREFIX="${PREFIX:-$(default_prefix)}"
+    BINDIR="$PREFIX/bin"
+    for name in amneziawg-go awg awg-quick; do
+        path="$BINDIR/$name"
+        if [[ -L $path && $(readlink "$path") == "$ROOT/bin/$name" ]]; then
+            if [[ -w $BINDIR ]]; then rm -f "$path"; else sudo rm -f "$path"; fi
+            say "Removed $path"
+        fi
+    done
+
 # Remove generated outputs without touching the submodules.
 clean:
     @rm -rf "$ROOT/bin" "$ROOT/build"

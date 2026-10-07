@@ -8,11 +8,13 @@ README; both official remote master heads were checked with `git ls-remote`.
 
 - Native build: passed; `amneziawg-go`, `awg`, and `awg-quick` are generated.
 - Engine reports `v3.1.20260828`; C tool reports `v3.1.20260812`.
-- Local regression suite after the Just migration: 17 tests passed. It exercises real Darwin functions
+- Local regression suite after the Just migration: 19 tests passed. It exercises real Darwin functions
   with temporary configuration/name/socket files and controlled route commands,
   plus clean export preparation and its missing-source/dirty-source/conflict
   failures. Further checks cover every Make notice and isolated installation,
-  purge, argument handling, and dev symlinks. The CLI help check uses upstream's
+  purge, argument handling, and development symlink installation/removal. Removal
+  checks cover Homebrew defaults, PREFIX overrides, dangling links, repeated
+  removal, and preservation of regular executables and foreign symlinks. The CLI help check uses upstream's
   stderr output convention.
 - Just script recipes use macOS Bash 3.2 for bootstrap/install logic; generated awg-quick selects
   Bash 4+ explicitly. The old Bash override is rejected by a regression test.
@@ -72,7 +74,7 @@ installation, uninstall/purge, and shared helpers were migrated one at a time.
 No project `.sh` wrapper/helper files remain. Runtime awg-quick is still generated
 from the patched upstream Bash source. Upstream source pins were not changed.
 
-Native compilation and all 17 local regressions pass after migration. Installer
+Native compilation and all 19 local regressions pass after migration. Installer
 and uninstaller tests use temporary prefixes and map privileged filesystem
 operations into a temporary configuration directory; they do not install on the
 host. No new upstream Go engine changes were made, so the separately documented

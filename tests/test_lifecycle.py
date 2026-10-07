@@ -66,10 +66,11 @@ raise SystemExit(subprocess.run([shutil.which(args[0]), *args[1:]]).returncode)
         path.write_text(body)
         path.chmod(0o755)
 
-    def run_task(self, task, *args):
+    def run_task(self, task, *args, env_updates=None):
         env = dict(os.environ, PREFIX=str(self.prefix),
                    PATH=str(self.commands) + os.pathsep + os.environ["PATH"],
                    TEST_SYSTEM_CONFIG=str(self.config_dir), TEST_PRIVILEGED_LOG=str(self.log))
+        env.update(env_updates or {})
         return subprocess.run(["just", "--justfile", str(self.root / "justfile"), task, *args],
                               env=env, text=True, capture_output=True)
 
@@ -113,17 +114,55 @@ raise SystemExit(subprocess.run([shutil.which(args[0]), *args[1:]]).returncode)
         operations = [json.loads(line) for line in self.log.read_text().splitlines()]
         self.assertEqual(operations, [["rm", "-rf", "/etc/amnezia/amneziawg"]])
 
-    def test_dev_install_links_outputs_and_uninstall_keeps_sources(self):
-        """Build fixture executables, install dev symlinks, remove them through
-        uninstall, and check the underlying build outputs and configs remain.
+    def test_brew_install_and_remove_keep_sources(self):
+        """Build fixture executables, install and remove development symlinks
+        through the brew aliases, and check the underlying build outputs and configs remain.
         """
-        self.assert_ok(self.run_task("dev-install"))
+        self.assert_ok(self.run_task("brew-install"))
         for name in ["amneziawg-go", "awg", "awg-quick"]:
             installed = self.prefix / "bin" / name
             self.assertTrue(installed.is_symlink())
             self.assertEqual(installed.resolve(), self.root / "bin" / name)
-        self.assert_ok(self.run_task("uninstall"))
+        self.assert_ok(self.run_task("brew-remove"))
         for name in ["amneziawg-go", "awg", "awg-quick"]:
             self.assertFalse((self.prefix / "bin" / name).is_symlink())
             self.assertTrue((self.root / "bin" / name).exists())
+        self.assertTrue(self.config.exists())
+
+    def test_dev_remove_preserves_unrelated_files_and_removes_dangling_links(self):
+        """Create a regular executable, a foreign symlink, and a dangling
+        checkout symlink; remove twice and check only the checkout link disappears.
+        """
+        regular = self.prefix / "bin/amneziawg-go"
+        regular.write_text("separate installation\n")
+        foreign_target = self.root / "other-checkout/awg-quick"
+        foreign = self.prefix / "bin/awg-quick"
+        foreign.symlink_to(foreign_target)
+        owned = self.prefix / "bin/awg"
+        owned.symlink_to(self.root / "bin/awg")
+        for _ in range(2):
+            self.assert_ok(self.run_task("dev-remove"))
+            self.assertFalse(owned.is_symlink())
+            self.assertEqual(regular.read_text(), "separate installation\n")
+            self.assertTrue(foreign.is_symlink())
+            self.assertEqual(os.readlink(foreign), str(foreign_target))
+            self.assertFalse((self.root / "build").exists())
+            self.assertTrue(self.config.exists())
+
+    def test_brew_remove_defaults_to_homebrew_prefix(self):
+        """Provide a temporary Homebrew prefix with dangling checkout links,
+        remove without PREFIX, and check the links vanish without building sources.
+        """
+        self.write_command("brew", '''#!/bin/bash
+set -euo pipefail
+[[ $# == 1 && $1 == --prefix ]] || exit 93
+printf '%s\\n' "$TEST_BREW_PREFIX"
+''')
+        for name in ["amneziawg-go", "awg", "awg-quick"]:
+            (self.prefix / "bin" / name).symlink_to(self.root / "bin" / name)
+        self.assert_ok(self.run_task("brew-remove", env_updates={
+            "PREFIX": "", "TEST_BREW_PREFIX": str(self.prefix)}))
+        for name in ["amneziawg-go", "awg", "awg-quick"]:
+            self.assertFalse((self.prefix / "bin" / name).is_symlink())
+        self.assertFalse((self.root / "build").exists())
         self.assertTrue(self.config.exists())
