@@ -87,6 +87,8 @@ put macOS adaptations in `patches/` instead.
 
 ## Build and install
 
+The root Makefile is a migration notice: every target prints its Just
+replacement and performs no build, installation, cleanup, or update.
 Run `just --list` to see all available tasks. The default `just` task builds
 the three executables. Use `PREFIX=... just install` to override the destination.
 
