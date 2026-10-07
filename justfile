@@ -144,7 +144,26 @@ install:
 
 # Remove installed executables; pass --purge to delete configurations too.
 uninstall *args:
-    @"$ROOT/uninstall.sh" "$@"
+    #!/bin/bash
+    # Preserve configs unless the user explicitly requests --purge.
+    set -euo pipefail
+    source "$ROOT/scripts/common.sh"
+    [[ $# -le 1 && ( $# -eq 0 || $1 == --purge ) ]] || die "Usage: just uninstall [--purge]"
+    PREFIX="${PREFIX:-$(default_prefix)}"
+    BINDIR="$PREFIX/bin"
+    CONFDIR="/etc/amnezia/amneziawg"
+    for name in amneziawg-go awg awg-quick; do
+        path="$BINDIR/$name"
+        [[ -e $path || -L $path ]] || continue
+        if [[ -w $BINDIR ]]; then rm -f "$path"; else sudo rm -f "$path"; fi
+        say "Removed $path"
+    done
+    if [[ ${1:-} == --purge ]]; then
+        sudo rm -rf "$CONFDIR"
+        say "Removed $CONFDIR and its configurations"
+    else
+        say "Keeping configurations in $CONFDIR (use --purge to delete them)"
+    fi
 
 # Symlink build outputs into PREFIX/bin for development.
 dev-install: build

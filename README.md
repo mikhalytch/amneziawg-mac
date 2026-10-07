@@ -183,7 +183,7 @@ may reject an addition; that existing route is left untouched.
 - `sudo` is needed for tunnel creation, routing, and DNS changes. `just test`
   uses temporary files and simulated routing commands instead of changing the
   machine's VPN, routes, DNS, or installed executables.
-- Uninstall preserves configs by default. `./uninstall.sh --purge` deletes them
+- Uninstall preserves configs by default. `just uninstall --purge` deletes them
   permanently. Use the same `PREFIX` used for installation.
 
 Verify routing with your real configuration:
@@ -257,8 +257,8 @@ does not establish connectivity to your real VPN server.
 ## Uninstall
 
 ```sh
-./uninstall.sh                # removes executables, keeps configs
-./uninstall.sh --purge        # also removes the system config directory
+just uninstall                # removes executables, keeps configs
+just uninstall --purge        # also removes the system config directory
 ```
 
 ## Attribution and licenses
