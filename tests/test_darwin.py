@@ -44,6 +44,110 @@ class DarwinTests(unittest.TestCase):
     def assert_ok(self, result):
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def run_dns_script(self, body, dns="192.0.2.53\n", search="corp.example\n"):
+        state = self.root / "dns-state"
+        state.mkdir()
+        (state / "services").write_text("Wi-Fi\n")
+        (state / "Wi-Fi.dns").write_text(dns)
+        (state / "Wi-Fi.search").write_text(search)
+        # Replace only networksetup's host reads/writes with persistent files;
+        # the production DNS discovery, comparison and restoration run unchanged.
+        return self.run_script(r'''
+DNS_STATE="${ROUTE_LOG%/*}/dns-state"
+networksetup() {
+    local action=$1 service=${2:-} kind
+    if [[ $action == -listallnetworkservices ]]; then
+        printf 'An asterisk denotes a disabled network service.\n'
+        cat "$DNS_STATE/services"
+        return
+    fi
+    case "$action" in
+        -getdnsservers|-setdnsservers) kind=dns ;;
+        -getsearchdomains|-setsearchdomains) kind=search ;;
+        *) return 98 ;;
+    esac
+    if [[ $action == -get* ]]; then
+        if [[ -s "$DNS_STATE/$service.$kind" ]]; then
+            cat "$DNS_STATE/$service.$kind"
+        else
+            printf "There aren't any settings on %s.\n" "$service"
+        fi
+    else
+        printf '%s\n' "$*" >> "$ROUTE_LOG"
+        shift 2
+        if [[ $1 == Empty ]]; then
+            : > "$DNS_STATE/$service.$kind"
+        else
+            printf '%s\n' "$@" > "$DNS_STATE/$service.$kind"
+        fi
+    fi
+}
+''' + body)
+
+    def test_dns_repeated_events_leave_matching_settings_untouched(self):
+        """Create matching DNS with automatic search domains; apply thirty
+        network-event updates; check no host settings are rewritten.
+        """
+        result = self.run_dns_script(
+            'DNS=(192.0.2.53); DNS_SEARCH=(); '
+            'for ((event=0; event<30; event++)); do set_dns; done', search="")
+        self.assert_ok(result)
+        self.assertEqual(self.log.read_text(), "")
+
+    def test_dns_writes_only_the_setting_that_changed(self):
+        """Create existing DNS/search settings; change search, then the DNS
+        list; check only the changed setting is written with the full value.
+        """
+        result = self.run_dns_script(
+            'DNS=(192.0.2.53); DNS_SEARCH=(vpn.example internal.example); set_dns; '
+            'DNS=(192.0.2.54 2001:db8::53); set_dns; set_dns')
+        self.assert_ok(result)
+        self.assertEqual(self.log.read_text().splitlines(), [
+            '-setsearchdomains Wi-Fi vpn.example internal.example',
+            '-setdnsservers Wi-Fi 192.0.2.54 2001:db8::53',
+        ])
+        self.assertEqual((self.root / 'dns-state/Wi-Fi.dns').read_text(),
+                         '192.0.2.54\n2001:db8::53\n')
+
+    def test_dns_repairs_external_changes_and_restores_original_settings(self):
+        """Create original settings; apply VPN DNS, simulate an external
+        override, reapply and disconnect; check repair and exact restoration.
+        """
+        result = self.run_dns_script(
+            'DNS=(192.0.2.54); DNS_SEARCH=(); set_dns; '
+            'printf "192.0.2.99\\n" > "$DNS_STATE/Wi-Fi.dns"; '
+            'set_dns; set_dns; del_dns')
+        self.assert_ok(result)
+        self.assertEqual(self.log.read_text().splitlines(), [
+            '-setdnsservers Wi-Fi 192.0.2.54',
+            '-setsearchdomains Wi-Fi Empty',
+            '-setdnsservers Wi-Fi 192.0.2.54',
+            '-setdnsservers Wi-Fi 192.0.2.53',
+            '-setsearchdomains Wi-Fi corp.example',
+        ])
+        self.assertEqual((self.root / 'dns-state/Wi-Fi.dns').read_text(), '192.0.2.53\n')
+        self.assertEqual((self.root / 'dns-state/Wi-Fi.search').read_text(), 'corp.example\n')
+
+    def test_dns_new_service_preserves_automatic_dns_on_disconnect(self):
+        """Connect on Wi-Fi, add an Ethernet service with automatic DNS,
+        update and disconnect; check discovery and restoration for both services.
+        """
+        result = self.run_dns_script(
+            'DNS=(192.0.2.54); DNS_SEARCH=(); set_dns; : > "$ROUTE_LOG"; '
+            'printf "USB Ethernet\\n" >> "$DNS_STATE/services"; '
+            'set_dns; set_dns; del_dns')
+        self.assert_ok(result)
+        writes = self.log.read_text().splitlines()
+        self.assertEqual(writes[0], '-setdnsservers USB Ethernet 192.0.2.54')
+        self.assertCountEqual(writes[1:], [
+            '-setdnsservers Wi-Fi 192.0.2.53',
+            '-setsearchdomains Wi-Fi corp.example',
+            '-setdnsservers USB Ethernet Empty',
+            '-setsearchdomains USB Ethernet Empty',
+        ])
+        self.assertEqual((self.root / 'dns-state/USB Ethernet.dns').read_text(), '')
+        self.assertEqual((self.root / 'dns-state/USB Ethernet.search').read_text(), '')
+
     def test_strip_consumes_exclusions_without_changing_allowed_ips(self):
         """Create a config with exclusions; strip quick-only settings; check
         that exclusions disappear and the peer's full-tunnel AllowedIPs survives.

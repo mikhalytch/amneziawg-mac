@@ -11,7 +11,10 @@ Patches 01 and 02 reproduce all functional source changes from
 `v3.1.20260812` (`ee0f0a9aa34ff0a0da4b3433b9512781cfe02843`).
 
 Patch 03 adds the separately documented exclusion-route safety and SaveConfig
-corrections on 2026-10-07. All three patches are GPL-2.0; original upstream
+corrections on 2026-10-07. Patch 04 makes DNS updates idempotent on 2026-10-20
+to avoid redundant preference writes during route-monitor callbacks. It still
+corrects externally changed settings and preserves original DNS for cleanup.
+All patches are GPL-2.0; original upstream
 copyright/SPDX notices remain in the patched file.
 
 When upstream changes, review its Darwin script, then regenerate the affected

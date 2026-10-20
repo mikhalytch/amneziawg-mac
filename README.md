@@ -155,6 +155,11 @@ tree under `build/`, leaving the upstream submodule unmodified:
    `SaveConfig`, respects `Table = off`, avoids duplicate additions, and removes
    only routes successfully added by this script. Route-add failures and missing
    gateways produce warnings.
+4. **`04-dns-idempotence.patch`** compares current DNS servers and search
+   domains before writing preferences. Repeated route events no longer rewrite
+   unchanged settings and flood Wi-Fi and menu services with notifications.
+   External DNS changes are still corrected, and disconnect restores the
+   original settings, including automatic DNS.
 
 The production installer, uninstaller, dev-install flow,
 configuration example, troubleshooting documentation, and license notice are
